@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "microsoft.docs.mcp": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "github-microcks.mcp": {
+      "type": "http",
+      "url": "https://gitmcp.io/microcks/microcks-testcontainers-dotnet"
+    }
+  }
+}
