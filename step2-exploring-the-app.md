@@ -27,16 +27,16 @@ However, this situation is complex enough to highlight the two problems we're ad
 
 This application must implement basic flows:
 
-* When creating a new [Order](src/order.service/Domain/Order.cs), the service must check that the products are available before creating and persisting an order. Otherwise, order cannot be placed.
-* When the [Order](src/order.service/Domain/Order.cs) is actually created, the service must also publish an [OrderEvent](src/order.service/Domain/OrderEvent.cs) to a specific Kafka topic to propagate this information to other systems that will review the events.
-* When the [OrderEvent](src/order.service/Domain/OrderEvent.cs) has been reviewed, a new message is published on another Kafka topic. The [OrderEventListener](src/order.service/Infrastructure/OrderEventListener.cs) must capture it and update the corresponding [Order](src/order.service/Domain/Order.cs) status using the service.
+* When creating a new [Order](src/order.service/UseCases/Model/Order.cs), the service must check that the products are available before creating and persisting an order. Otherwise, order cannot be placed.
+* When the [Order](src/order.service/UseCases/Model/Order.cs) is actually created, the service must also publish an [OrderEvent](src/order.service/UseCases/Model/OrderEvent.cs) to a specific Kafka topic to propagate this information to other systems that will review the events.
+* When the [OrderEvent](src/order.service/UseCases/Model/OrderEvent.cs) has been reviewed, a new message is published on another Kafka topic. The [OrderEventListener](src/order.service/Infrastructure/OrderEventListener.cs) must capture it and update the corresponding [Order](src/order.service/UseCases/Model/Order.cs) status using the service.
 
 ## Flows specifications
 
 All the interactions are specified using API contracts:
 
 * The Order API is specified using the [order-service-openapi.yaml](tests/order.service.tests/resources/order-service-openapi.yaml) OpenAPI specification,
-* The Pastry API is specified using the [apipastries-openapi.yaml](tests/order.service.tests/resources/apipastries-openapi.yaml) OpenAPI specification,
+* The Pastry API is specified using the [apipastries-openapi.yaml](tests/order.service.tests/resources/third-parties/apipastries-openapi.yaml) OpenAPI specification,
 * The Order Events are specified using the [order-events-asyncapi.yaml](tests/order.service.tests/resources/order-events-asyncapi.yaml) AsyncAPI specification.
 
 Those specifications will help us for two things:
