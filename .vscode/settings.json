@@ -5,5 +5,6 @@
     },
     "chat.instructionsFilesLocations": {
         ".github/instructions": true
-    }
+    },
+    "chat.mcp.discovery.enabled": true
 }

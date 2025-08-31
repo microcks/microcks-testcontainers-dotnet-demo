@@ -60,3 +60,5 @@ With .NET CLI:
 dotnet restore
 dotnet build
 ```
+
+[Next](step2-exploring-the-app.md)

@@ -402,4 +402,4 @@ FodyWeavers.xsd
 .idea
 
 !.husky/csx
-.github/.DS_Store
+.DS_Store
