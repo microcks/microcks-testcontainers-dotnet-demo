@@ -52,7 +52,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
         pastries = await pastryAPIClient.ListPastriesAsync("L", TestContext.Current.CancellationToken);
         Assert.Equal(2, pastries.Count); // Assuming there is 1 pastry in the mock
 
-        bool isVerified = await MicrocksContainer.VerifyAsync("API Pastries", "0.0.1");
+        bool isVerified = await MicrocksContainer.VerifyAsync("API Pastries", "0.0.1", cancellationToken: TestContext.Current.CancellationToken);
         Assert.True(isVerified, "Pastry API should be verified successfully");
     }
 
@@ -60,7 +60,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
     public async Task TestPastryAPIClient_GetPastryByNameAsync()
     {
         // Arrange
-        double initialInvocationCount = await MicrocksContainer.GetServiceInvocationsCountAsync("API Pastries", "0.0.1");
+        double initialInvocationCount = await MicrocksContainer.GetServiceInvocationsCountAsync("API Pastries", "0.0.1", cancellationToken: TestContext.Current.CancellationToken);
 
         var pastryAPIClient = this.Factory.Services.GetRequiredService<PastryAPIClient>();
 
@@ -83,7 +83,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
         Assert.False(eclairChocolat.IsAvailable());
 
         // Vérifier le nombre d'invocations
-        double finalInvocationCount = await MicrocksContainer.GetServiceInvocationsCountAsync("API Pastries", "0.0.1");
+        double finalInvocationCount = await MicrocksContainer.GetServiceInvocationsCountAsync("API Pastries", "0.0.1", cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(initialInvocationCount + 3, finalInvocationCount);
     }
 }
