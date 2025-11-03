@@ -92,6 +92,7 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
         // Create the Microcks container ensemble with the Kafka connection
         this.MicrocksContainerEnsemble = new MicrocksContainerEnsemble(network, MicrocksImage)
             .WithAsyncFeature() // We need this for async mocking and contract-testing
+            .WithPostman() // We need this for Postman contract-testing
             .WithMainArtifacts("resources/order-service-openapi.yaml", "resources/order-events-asyncapi.yaml", "resources/third-parties/apipastries-openapi.yaml")
             .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
             .WithKafkaConnection(new KafkaConnection(kafkaListener)); // We need this to connect to Kafka
