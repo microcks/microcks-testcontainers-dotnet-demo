@@ -47,7 +47,7 @@ public class OrderControllerContractTests : BaseIntegrationTest
             // FilteredOperations can be used to limit the operations to test
         };
 
-        var testResult = await MicrocksContainer.TestEndpointAsync(request);
+        var testResult = await MicrocksContainer.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 
         // You may inspect complete response object with following:
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
@@ -69,7 +69,7 @@ public class OrderControllerContractTests : BaseIntegrationTest
             TestEndpoint = "http://host.testcontainers.internal:" + Port + "/api",
         };
 
-        var testResult = await this.MicrocksContainer.TestEndpointAsync(request);
+        var testResult = await this.MicrocksContainer.TestEndpointAsync(request, TestContext.Current.CancellationToken);
 
         // You may inspect complete response object with following:
         var json = JsonSerializer.Serialize(testResult, new JsonSerializerOptions { WriteIndented = true });
@@ -85,7 +85,7 @@ public class OrderControllerContractTests : BaseIntegrationTest
         // This is efficient for simple checks and avoids creating intermediate types.
         // However, you can also deserialize into a final type (e.g., a C# class or List<Dictionary<string, object>>)
         // if you need to process or validate the data in a more complex way.
-        var messages = await MicrocksContainer.GetMessagesForTestCaseAsync(testResult, "POST /orders");
+        var messages = await MicrocksContainer.GetMessagesForTestCaseAsync(testResult, "POST /orders", TestContext.Current.CancellationToken);
         foreach (var message in messages)
         {
             if ("201".Equals(message.Response.Status))

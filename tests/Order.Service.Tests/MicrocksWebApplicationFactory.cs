@@ -34,7 +34,7 @@ namespace Order.Service.Tests;
 public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
-    private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.12.1";
+    private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.13.0";
 
     public KafkaContainer KafkaContainer { get; private set; } = null!;
 
@@ -105,11 +105,11 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
         base.ConfigureWebHost(builder);
 
         var microcksContainer = this.MicrocksContainerEnsemble.MicrocksContainer;
-        var pastryApiEndpoint = microcksContainer.GetRestMockEndpoint("API Pastries", "0.0.1");
+        var pastryApiEndpoint = microcksContainer.GetRestMockEndpoint("API+Pastries", "0.0.1");
 
         // Configure the factory to use the Microcks container address
         // Use Uri constructor to ensure proper path handling
-        builder.UseSetting("PastryApi:BaseUrl", $"{pastryApiEndpoint}/");
+        builder.UseSetting("PastryApi:BaseUrl", $"{pastryApiEndpoint}");
     }
 
     public async override ValueTask DisposeAsync()
