@@ -1,0 +1,54 @@
+﻿on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      version:
+        required: true
+        type: string
+permissions: read-all
+
+jobs:
+  build_test:
+    runs-on: ${{ inputs.runs-on }}
+
+    steps:
+    - name: 🔄 Checkout
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        lfs: true
+        fetch-depth: 0
+
+    - name: 🛠️ Setup .NET
+      uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: 🔧 Restore .NET Tools
+      run: dotnet tool restore
+
+    - name: 🔧 Restore dependencies
+      run: dotnet restore
+
+    - name: 🏗 Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: 🧪 Test .NET
+      id: test
+      run: |
+        dotnet test --no-build `
+        --configuration Release `
+        --logger trx `
+        --collect:"XPlat Code Coverage" `
+        --results-directory testresults
+      shell: pwsh
+
+    - name: 📤 Upload Test And Coverage Results
+      uses: actions/upload-artifact@v4
+      if: always() # run this step even if previous step failed
+      with:
+        name: ${{ inputs.runs-on }}
+        path: testresults
+
