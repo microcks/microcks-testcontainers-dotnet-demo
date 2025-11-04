@@ -17,6 +17,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -32,6 +34,8 @@ public class OrderUseCase
     private readonly ILogger<OrderUseCase> _logger;
     private readonly PastryAPIClient _pastryAPIClient;
     private readonly IEventPublisher _eventPublisher;
+
+    private readonly Dictionary<string, List<OrderEvent>> orderRepository = [];
 
     public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient, IEventPublisher eventPublisher)
     {
@@ -88,9 +92,54 @@ public class OrderUseCase
             order,
             "Creation"
         );
+        // Persist the order event
+        PersistOrderEvent(orderEvent);
+
         await _eventPublisher.PublishOrderCreatedAsync(orderEvent, cancellationToken);
 
         return order;
+    }
+
+    private void PersistOrderEvent(OrderEvent orderEvent)
+    {
+        if (orderRepository.TryGetValue(orderEvent.Order.Id, out var events))
+        {
+            // Append to existing events
+            events.Add(orderEvent);
+            return;
+        }
+
+        // First event for this order
+        orderRepository.Add(orderEvent.Order.Id, [orderEvent]);
+    }
+
+    /// <summary>
+    /// Update an order after review.
+    /// </summary>
+    /// <param name="orderEvent">The order event containing updated order information.</param>
+    public async Task UpdateReviewedOrderAsync(OrderEvent orderEvent)
+    {
+        // Persist the order event
+        PersistOrderEvent(orderEvent);
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Retrieves an order by its ID.
+    /// </summary>
+    /// <param name="orderId">The order ID to retrieve.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The order if found, null otherwise.</returns>
+    public async Task<OrderModel> GetOrderAsync(string orderId, CancellationToken cancellationToken = default)
+    {
+        List<OrderEvent> orderEvents = orderRepository.GetValueOrDefault(orderId, null!);
+        if (orderEvents is null || orderEvents.Any() == false)
+        {
+            throw new OrderNotFoundException(orderId);
+        }
+        var lastEvent = orderEvents.Last();
+        return await Task.FromResult(lastEvent.Order);
     }
 
     private async Task<bool> CheckPastryAvailabilityAsync(string pastryName, CancellationToken cancellationToken = default)

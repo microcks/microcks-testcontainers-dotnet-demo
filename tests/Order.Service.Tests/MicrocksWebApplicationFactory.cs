@@ -20,12 +20,19 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Linq;
+
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
+
 using Microcks.Testcontainers;
 using Microcks.Testcontainers.Connection;
+
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+
 using Testcontainers.Kafka;
+
 using Xunit;
 
 namespace Order.Service.Tests;
@@ -120,13 +127,13 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
             await this.KafkaContainer.StartAsync(TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
-        // Create the Microcks container ensemble with the Kafka connection
-        this.MicrocksContainerEnsemble = new MicrocksContainerEnsemble(network, MicrocksImage)
-            .WithAsyncFeature() // We need this for async mocking and contract-testing
-            .WithPostman() // We need this for Postman contract-testing
-            .WithMainArtifacts("resources/order-service-openapi.yaml", "resources/order-events-asyncapi.yaml", "resources/third-parties/apipastries-openapi.yaml")
-            .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
-            .WithKafkaConnection(new KafkaConnection(kafkaListener)); // We need this to connect to Kafka
+            // Create the Microcks container ensemble with the Kafka connection
+            this.MicrocksContainerEnsemble = new MicrocksContainerEnsemble(network, MicrocksImage)
+                .WithAsyncFeature() // We need this for async mocking and contract-testing
+                .WithPostman() // We need this for Postman contract-testing
+                .WithMainArtifacts("resources/order-service-openapi.yaml", "resources/order-events-asyncapi.yaml", "resources/third-parties/apipastries-openapi.yaml")
+                .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
+                .WithKafkaConnection(new KafkaConnection(kafkaListener)); // We need this to connect to Kafka
 
             TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting Microcks container ensemble...");
             await this.MicrocksContainerEnsemble.StartAsync()
@@ -145,6 +152,22 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
     {
         base.ConfigureWebHost(builder);
 
+        // Delete IHostedService registrations if needed
+        builder.ConfigureServices(services =>
+        {
+            // Remove any IHostedService registrations if needed
+            // Find OrderEventConsumer hosted service and remove it
+            var hostedServiceDescriptor = services
+                .Single(d => d.ServiceType == typeof(IHostedService) &&
+                                     d.ImplementationType == typeof(OrderEventConsumerHostedService));
+
+            // Delete the descriptor
+            if (hostedServiceDescriptor != null)
+            {
+                services.Remove(hostedServiceDescriptor);
+            }
+        });
+
         var microcksContainer = this.MicrocksContainerEnsemble.MicrocksContainer;
         var pastryApiEndpoint = microcksContainer.GetRestMockEndpoint("API+Pastries", "0.0.1");
 
@@ -156,6 +179,11 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
         var kafkaBootstrapServers = this.KafkaContainer.GetBootstrapAddress()
             .Replace("PLAINTEXT://", "", StringComparison.OrdinalIgnoreCase);
         builder.UseSetting("Kafka:BootstrapServers", kafkaBootstrapServers);
+
+        var microcksMinion = MicrocksContainerEnsemble.AsyncMinionContainer;
+        var orderEventsReviewedTopic = microcksMinion
+            .GetKafkaMockTopic("Order Events API", "0.1.0", "PUBLISHED orders-reviewed");
+        builder.UseSetting("Kafka:OrderEventsTopic", orderEventsReviewedTopic);
     }
 
     public async override ValueTask DisposeAsync()

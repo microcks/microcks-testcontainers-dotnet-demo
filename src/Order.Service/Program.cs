@@ -24,10 +24,13 @@ using Order.Service.Client;
 using Order.Service.Endpoints;
 using Order.Service.UseCases;
 using Confluent.Kafka;
+using Order.Service;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddTransient<OrderUseCase>();
+// Singleton for fake "Repository" inside.
+builder.Services.AddSingleton<OrderUseCase>();
+
 var configuration = builder.Configuration;
 var pastryApiSection = configuration.GetRequiredSection("PastryApi");
 var pastryApiUrl = pastryApiSection.GetValue<string>("BaseUrl");
@@ -52,7 +55,24 @@ builder.Services.AddSingleton(sp =>
 
     return new ProducerBuilder<string, string>(config).Build();
 });
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = new ConsumerConfig
+    {
+        ClientId = "order-service-consumer",
+        GroupId = "order-service-group",
+        BootstrapServers = builder.Configuration.GetValue<string>("Kafka:BootstrapServers"),
+        AutoOffsetReset = AutoOffsetReset.Earliest,
+        EnableAutoCommit = false
+    };
+
+    return new ConsumerBuilder<string, string>(config).Build();
+});
+
 builder.Services.AddSingleton<IEventPublisher, OrderEventPublisher>();
+builder.Services.AddScoped<IOrderEventProcessor, OrderEventProcessor>();
+builder.Services.AddHostedService<OrderEventConsumerHostedService>();
 
 // Services for API metadata
 builder.Services.AddOpenApi();

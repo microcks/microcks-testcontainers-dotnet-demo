@@ -15,13 +15,20 @@
 //
 //
 
-using System.Text.Json.Serialization;
+using System;
 
-namespace Order.Service.UseCases.Model;
+namespace Order.Service.UseCases;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum OrderStatus
+/// <summary>
+/// Exception thrown when an order is not found.
+/// </summary>
+public class OrderNotFoundException : Exception
 {
-    Created,
-    Validated,
+    public OrderNotFoundException(string orderId) : base($"Order with ID '{orderId}' not found.")
+    {
+    }
+
+    public OrderNotFoundException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
 }
