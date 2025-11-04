@@ -31,11 +31,13 @@ public class OrderUseCase
 {
     private readonly ILogger<OrderUseCase> _logger;
     private readonly PastryAPIClient _pastryAPIClient;
+    private readonly IEventPublisher _eventPublisher;
 
-    public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient)
+    public OrderUseCase(ILogger<OrderUseCase> logger, PastryAPIClient pastryAPIClient, IEventPublisher eventPublisher)
     {
         _logger = logger;
         _pastryAPIClient = pastryAPIClient;
+        _eventPublisher = eventPublisher;
     }
 
     /// <summary>
@@ -47,14 +49,14 @@ public class OrderUseCase
     /// <returns>A created Order with incoming info, new unique identifier and created status.</returns>
     /// <exception cref="UnavailablePastryException">Thrown when a pastry is unavailable.</exception>
     /// <exception cref="Exception">Thrown for general errors.</exception>
-    public async Task<OrderModel> PlaceOrderAsync(OrderInfo orderInfo)
+    public async Task<OrderModel> PlaceOrderAsync(OrderInfo orderInfo, CancellationToken cancellationToken = default)
     {
         // For all products in order, check the availability calling the Pastry API.
         var availabilityTasks = new Dictionary<string, Task<bool>>();
 
         foreach (var productQuantity in orderInfo.ProductQuantities)
         {
-            availabilityTasks[productQuantity.ProductName] = CheckPastryAvailabilityAsync(productQuantity.ProductName);
+            availabilityTasks[productQuantity.ProductName] = CheckPastryAvailabilityAsync(productQuantity.ProductName, cancellationToken);
         }
 
         // Wait for all tasks to finish.
@@ -79,6 +81,14 @@ public class OrderUseCase
             ProductQuantities = orderInfo.ProductQuantities,
             TotalPrice = orderInfo.TotalPrice
         };
+
+        // Emit OrderEvent for creation
+        var orderEvent = new OrderEvent(
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            order,
+            "Creation"
+        );
+        await _eventPublisher.PublishOrderCreatedAsync(orderEvent, cancellationToken);
 
         return order;
     }

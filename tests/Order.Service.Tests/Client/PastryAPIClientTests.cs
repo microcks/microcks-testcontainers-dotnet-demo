@@ -26,6 +26,10 @@ using Xunit;
 
 namespace Order.Service.Tests.Client;
 
+/// <summary>
+/// Tests for PastryAPIClient using shared Microcks container instance.
+/// Validates client behavior against mocked Pastry API responses.
+/// </summary>
 public class PastryAPIClientTests : BaseIntegrationTest
 {
     private readonly ITestOutputHelper TestOutputHelper;
@@ -36,6 +40,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
+        SetupTestOutput(testOutputHelper);
     }
 
     [Fact]

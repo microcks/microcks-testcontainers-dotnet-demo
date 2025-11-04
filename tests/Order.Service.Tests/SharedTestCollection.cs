@@ -5,7 +5,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//  http://www.apache.org/licenses/LICENSE-2.0 
+//  http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,16 @@
 //
 //
 
-using System.Text.Json.Serialization;
+using Xunit;
 
-namespace Order.Service.UseCases.Model;
+namespace Order.Service.Tests;
 
-public sealed record ProductQuantity(
-    [property: JsonPropertyName("productName")] string ProductName,
-    [property: JsonPropertyName("quantity")] int Quantity
-);
+/// <summary>
+/// Collection definition to ensure all integration tests share the same MicrocksWebApplicationFactory instance.
+/// This guarantees that containers are started only once across all test classes.
+/// </summary>
+[CollectionDefinition(Name)]
+public class SharedTestCollection : ICollectionFixture<MicrocksWebApplicationFactory<Program>>
+{
+    public const string Name = "SharedTestCollection";
+}

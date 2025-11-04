@@ -17,10 +17,9 @@
 
 using System;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using DotNet.Testcontainers;
+using System.Threading;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using Microcks.Testcontainers;
@@ -31,10 +30,18 @@ using Xunit;
 
 namespace Order.Service.Tests;
 
+/// <summary>
+/// Shared WebApplicationFactory for integration tests using Microcks and Kafka containers.
+/// This factory is designed to be used as a singleton across all test classes to optimize container startup time.
+/// Containers are started once and reused by all tests in the test assembly.
+/// </summary>
 public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.13.0";
+
+    private static readonly SemaphoreSlim InitializationSemaphore = new(1, 1);
+    private static bool _isInitialized;
 
     public KafkaContainer KafkaContainer { get; private set; } = null!;
 
@@ -44,6 +51,11 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
     /// Gets the actual port used by the server after it starts
     /// </summary>
     public ushort ActualPort { get; private set; }
+
+    /// <summary>
+    /// Indicates whether the factory has been initialized
+    /// </summary>
+    public bool IsInitialized => _isInitialized;
 
     /// <summary>
     /// Gets an available port on the host machine.
@@ -67,27 +79,46 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
 
     public async ValueTask InitializeAsync()
     {
-        // The port is dynamically determined because we use Microcks,
-        // so we need to get an available port before starting the server (Kestrel) and Microcks.
-        // because we use microcks to set up the base address for the API in the settings.
-        ActualPort = GetAvailablePort();
-        UseKestrel(ActualPort);
-        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
-            .ConfigureAwait(true);
+        // Use semaphore to ensure only one initialization happens across all test instances
+        await InitializationSemaphore.WaitAsync(TestContext.Current.CancellationToken);
+        try
+        {
+            if (_isInitialized)
+            {
+                TestLogger.WriteLine("[MicrocksWebApplicationFactory] Factory already initialized, skipping...");
+                return;
+            }
 
-        string kafkaListener = "kafka:19092";
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting initialization...");
 
-        var network = new NetworkBuilder().Build();
-        KafkaContainer = new KafkaBuilder()
-            .WithImage("confluentinc/cp-kafka:7.9.0")
-            .WithNetwork(network)
-            .WithNetworkAliases("kafka")
-            .WithListener(kafkaListener)
-            .Build();
+            // The port is dynamically determined because we use Microcks,
+            // so we need to get an available port before starting the server (Kestrel) and Microcks.
+            // because we use microcks to set up the base address for the API in the settings.
+            ActualPort = GetAvailablePort();
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Using port: {0}", ActualPort);
 
-        // Start the Kafka container
-        await this.KafkaContainer.StartAsync(TestContext.Current.CancellationToken)
-            .ConfigureAwait(true);
+            UseKestrel(ActualPort);
+            await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
+
+            string kafkaListener = "kafka:19092";
+
+            var network = new NetworkBuilder().Build();
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Creating Kafka container...");
+
+            KafkaContainer = new KafkaBuilder()
+                .WithImage("confluentinc/cp-kafka:7.9.0")
+                .WithPortBinding(9092, KafkaBuilder.KafkaPort)
+                .WithPortBinding(9093, KafkaBuilder.BrokerPort)
+                .WithNetwork(network)
+                .WithNetworkAliases("kafka")
+                .WithListener(kafkaListener)
+                .Build();
+
+            // Start the Kafka container
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting Kafka container...");
+            await this.KafkaContainer.StartAsync(TestContext.Current.CancellationToken)
+                .ConfigureAwait(true);
 
         // Create the Microcks container ensemble with the Kafka connection
         this.MicrocksContainerEnsemble = new MicrocksContainerEnsemble(network, MicrocksImage)
@@ -97,8 +128,17 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
             .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
             .WithKafkaConnection(new KafkaConnection(kafkaListener)); // We need this to connect to Kafka
 
-        await this.MicrocksContainerEnsemble.StartAsync()
-            .ConfigureAwait(true);
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting Microcks container ensemble...");
+            await this.MicrocksContainerEnsemble.StartAsync()
+                .ConfigureAwait(true);
+
+            _isInitialized = true;
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Initialization completed successfully");
+        }
+        finally
+        {
+            InitializationSemaphore.Release();
+        }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -111,13 +151,32 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
         // Configure the factory to use the Microcks container address
         // Use Uri constructor to ensure proper path handling
         builder.UseSetting("PastryApi:BaseUrl", $"{pastryApiEndpoint}");
+
+        // Configure the factory to use the Kafka container address
+        var kafkaBootstrapServers = this.KafkaContainer.GetBootstrapAddress()
+            .Replace("PLAINTEXT://", "", StringComparison.OrdinalIgnoreCase);
+        builder.UseSetting("Kafka:BootstrapServers", kafkaBootstrapServers);
     }
 
     public async override ValueTask DisposeAsync()
     {
+        TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting disposal...");
+
         await base.DisposeAsync();
 
-        await this.KafkaContainer.DisposeAsync();
-        await this.MicrocksContainerEnsemble.DisposeAsync();
+        if (KafkaContainer != null)
+        {
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposing Kafka container...");
+            await this.KafkaContainer.DisposeAsync();
+        }
+
+        if (MicrocksContainerEnsemble != null)
+        {
+            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposing Microcks container ensemble...");
+            await this.MicrocksContainerEnsemble.DisposeAsync();
+        }
+
+        _isInitialized = false;
+        TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposal completed");
     }
 }

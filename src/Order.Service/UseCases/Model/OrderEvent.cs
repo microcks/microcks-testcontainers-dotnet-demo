@@ -15,33 +15,11 @@
 //
 //
 
-
 using System.Text.Json.Serialization;
-using System;
-using System.Collections.Generic;
-
 namespace Order.Service.UseCases.Model;
 
-public sealed class Order
-{
-    [JsonPropertyName("id")]
-    public string Id { get; set; }
-
-    [JsonPropertyName("status")]
-    public OrderStatus Status { get; set; }
-
-    [JsonPropertyName("customerId")]
-    public string CustomerId { get; set; }
-
-    [JsonPropertyName("productQuantities")]
-    public IReadOnlyList<ProductQuantity> ProductQuantities { get; set; }
-
-    [JsonPropertyName("totalPrice")]
-    public double TotalPrice { get; set; }
-
-    public Order()
-    {
-        Id = Guid.NewGuid().ToString();
-        Status = OrderStatus.Created;
-    }
-}
+public sealed record OrderEvent(
+    [property: JsonPropertyName("timestamp")] long Timestamp,
+    [property: JsonPropertyName("order")] Order Order,
+    [property: JsonPropertyName("changeReason")] string ChangeReason
+);

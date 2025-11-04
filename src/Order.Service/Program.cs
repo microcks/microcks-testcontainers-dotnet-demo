@@ -23,6 +23,7 @@ using Microsoft.Extensions.Configuration;
 using Order.Service.Client;
 using Order.Service.Endpoints;
 using Order.Service.UseCases;
+using Confluent.Kafka;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,11 +36,23 @@ if (string.IsNullOrWhiteSpace(pastryApiUrl))
     throw new InvalidOperationException("PastryApi:BaseUrl configuration is required and cannot be null or empty.");
 }
 
-
 builder.Services.AddHttpClient<PastryAPIClient>(opt =>
 {
     opt.BaseAddress = new Uri(pastryApiUrl + "/");
 });
+
+// Kafka configuration
+builder.Services.AddSingleton(sp =>
+{
+    var config = new ProducerConfig
+    {
+        ClientId = "order-service-producer",
+        BootstrapServers = builder.Configuration.GetValue<string>("Kafka:BootstrapServers"),
+    };
+
+    return new ProducerBuilder<string, string>(config).Build();
+});
+builder.Services.AddSingleton<IEventPublisher, OrderEventPublisher>();
 
 // Services for API metadata
 builder.Services.AddOpenApi();

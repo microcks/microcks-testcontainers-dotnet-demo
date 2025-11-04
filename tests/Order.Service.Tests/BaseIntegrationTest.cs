@@ -21,10 +21,16 @@ using Xunit;
 
 using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http;
+using Testcontainers.Kafka;
 
 namespace Order.Service.Tests;
 
-public class BaseIntegrationTest : IClassFixture<MicrocksWebApplicationFactory<Program>>
+/// <summary>
+/// Base class for integration tests using a shared MicrocksWebApplicationFactory instance.
+/// All tests inheriting from this class will share the same factory instance across the entire test assembly.
+/// </summary>
+[Collection(SharedTestCollection.Name)]
+public abstract class BaseIntegrationTest
 {
 
     public WebApplicationFactory<Program> Factory { get; private set; }
@@ -32,7 +38,7 @@ public class BaseIntegrationTest : IClassFixture<MicrocksWebApplicationFactory<P
     public ushort Port { get; private set; }
     public MicrocksContainerEnsemble MicrocksContainerEnsemble { get; }
     public MicrocksContainer MicrocksContainer => MicrocksContainerEnsemble.MicrocksContainer;
-
+    public KafkaContainer KafkaContainer { get; }
     public HttpClient? HttpClient { get; private set; }
 
     protected BaseIntegrationTest(MicrocksWebApplicationFactory<Program> factory)
@@ -43,6 +49,15 @@ public class BaseIntegrationTest : IClassFixture<MicrocksWebApplicationFactory<P
         Port = factory.ActualPort;
 
         MicrocksContainerEnsemble = factory.MicrocksContainerEnsemble;
+        KafkaContainer = factory.KafkaContainer;
+    }
+
+    /// <summary>
+    /// Sets up test output for logging. Call this method in test constructors that have ITestOutputHelper.
+    /// </summary>
+    protected void SetupTestOutput(ITestOutputHelper testOutputHelper)
+    {
+        TestLogger.SetTestOutput(testOutputHelper);
     }
 
 }

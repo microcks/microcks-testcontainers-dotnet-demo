@@ -24,6 +24,10 @@ using Xunit;
 
 namespace Order.Service.Tests.Api;
 
+/// <summary>
+/// Contract tests for Order API endpoints using shared Microcks container instance.
+/// Tests validate that the API implementation conforms to the OpenAPI specification.
+/// </summary>
 public class OrderControllerContractTests : BaseIntegrationTest
 {
     private readonly ITestOutputHelper TestOutputHelper;
@@ -34,6 +38,7 @@ public class OrderControllerContractTests : BaseIntegrationTest
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
+        SetupTestOutput(testOutputHelper);
     }
 
     [Fact]
