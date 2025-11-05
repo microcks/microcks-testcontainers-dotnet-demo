@@ -23,7 +23,7 @@ using Microsoft.Extensions.Logging;
 using Order.Service.UseCases;
 using Order.Service.UseCases.Model;
 using OrderModel = Order.Service.UseCases.Model.Order;
-
+using static Awaitility.Awaitility;
 using Xunit;
 
 namespace Order.Service.Tests.UseCases;
@@ -34,7 +34,7 @@ public class OrderEventListenerTests : BaseIntegrationTest
 
     public OrderEventListenerTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
@@ -52,11 +52,41 @@ public class OrderEventListenerTests : BaseIntegrationTest
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var consumerTask = StartOrderEventConsumerAsync(cts.Token);
 
+        var orderUseCase = Factory.Services.GetRequiredService<OrderUseCase>();
         OrderModel? order = null;
-        // Act & Assert - Polling pattern similar to the Java example
+
+        // Act & Assert
         try
         {
-            order = await PollForOrderProcessingAsync(expectedOrderId, cts);
+            Await().
+                AtMost(TimeSpan.FromSeconds(4))
+                .PollDelay(TimeSpan.FromMilliseconds(400))
+                .PollInterval(TimeSpan.FromMilliseconds(400))
+                .Until(() =>
+                {
+                    try
+                    {
+                        var retrievedOrder = orderUseCase.GetOrderAsync(expectedOrderId, TestContext.Current.CancellationToken).Result;
+                        if (retrievedOrder != null)
+                        {
+                            TestOutputHelper.WriteLine($"Order {retrievedOrder.Id} successfully processed!");
+                            order = retrievedOrder;
+                            cts.Cancel(); // Cancel the consumer after successful processing
+                            return true;
+                        }
+                        return false;
+                    }
+                    catch (OrderNotFoundException)
+                    {
+                        TestOutputHelper.WriteLine($"Order {expectedOrderId} not found yet, continuing to poll...");
+                        return false;
+                    }
+                    catch (AggregateException ex) when (ex.InnerException is OrderNotFoundException)
+                    {
+                        TestOutputHelper.WriteLine($"Order {expectedOrderId} not found yet, continuing to poll...");
+                        return false;
+                    }
+                });
 
             Assert.NotNull(order);
             // Verify the order properties match expected values
@@ -84,43 +114,7 @@ public class OrderEventListenerTests : BaseIntegrationTest
         }
     }
 
-    private async Task<OrderModel> PollForOrderProcessingAsync(
-        string expectedOrderId,
-        CancellationTokenSource cts)
-    {
-        var pollDelay = TimeSpan.FromMilliseconds(400);
-        var pollInterval = TimeSpan.FromMilliseconds(400);
-        var startTime = DateTime.UtcNow;
 
-        var orderUseCase = Factory.Services.GetRequiredService<OrderUseCase>();
-        // Initial delay
-        await Task.Delay(pollDelay, TestContext.Current.CancellationToken);
-
-        while (DateTime.UtcNow - startTime < TimeSpan.FromSeconds(4))
-        {
-            try
-            {
-                // Simulate getting order by ID (this would normally call a GET endpoint)
-                var order = await orderUseCase.GetOrderAsync(expectedOrderId, TestContext.Current.CancellationToken);
-
-                if (order is not null)
-                {
-                    TestOutputHelper.WriteLine($"Order {order.Id} successfully processed!");
-                    cts.Cancel(); // Cancel the consumer after successful processing
-                    return order;
-                }
-            }
-            catch (OrderNotFoundException)
-            {
-                // Continue polling until timeout
-                TestOutputHelper.WriteLine($"Order {expectedOrderId} not found yet, continuing to poll...");
-            }
-
-            await Task.Delay(pollInterval, TestContext.Current.CancellationToken);
-        }
-
-        throw new TimeoutException($"Order {expectedOrderId} was not processed within the expected timeout.");
-    }
 
     private async Task StartOrderEventConsumerAsync(CancellationToken cancellationToken)
     {

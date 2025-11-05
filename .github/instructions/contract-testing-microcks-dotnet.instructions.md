@@ -41,7 +41,7 @@ public class OrderApiContractTest : BaseIntegrationTest
 {
     private readonly ITestOutputHelper TestOutputHelper;
 
-    public OrderApiContractTest(ITestOutputHelper testOutputHelper, MicrocksWebApplicationFactory<Program> factory)
+    public OrderApiContractTest(ITestOutputHelper testOutputHelper, OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
@@ -73,14 +73,14 @@ public class OrderApiContractTest : BaseIntegrationTest
 
 ### Custom WebApplicationFactory: .NET 10+ and below
 
-For both .NET 10+ and below, you must call `UseKestrel()` in your `MicrocksWebApplicationFactory` to ensure real HTTP server testing for contract tests. The only difference is the base class:
+For both .NET 10+ and below, you must call `UseKestrel()` in your `OrderServiceWebApplicationFactory` to ensure real HTTP server testing for contract tests. The only difference is the base class:
 
 For .NET 10 and above, inherit from `WebApplicationFactory<TProgram>`:
 ```csharp
-public class MicrocksWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>
     where TProgram : class
 {
-    public MicrocksWebApplicationFactory()
+    public OrderServiceWebApplicationFactory()
     {
         // Even in .NET 10+, call UseKestrel() for consistency and explicitness
         UseKestrel();
@@ -90,7 +90,7 @@ public class MicrocksWebApplicationFactory<TProgram> : WebApplicationFactory<TPr
 
 For .NET 9 and below, inherit from `KestrelWebApplicationFactory<TProgram>`:
 ```csharp
-public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.12.1";
@@ -158,14 +158,15 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
 
 ### Base Integration Test with Proper Initialization
 ```csharp
-public class BaseIntegrationTest : IClassFixture<MicrocksWebApplicationFactory<Program>>
+[Collection(SharedTestCollection.Name)]
+public class BaseIntegrationTest
 {
     public WebApplicationFactory<Program> Factory { get; private set; }
     public ushort Port { get; private set; }
     public MicrocksContainerEnsemble MicrocksContainerEnsemble { get; }
     public MicrocksContainer MicrocksContainer => MicrocksContainerEnsemble.MicrocksContainer;
 
-    protected BaseIntegrationTest(MicrocksWebApplicationFactory<Program> factory)
+    protected BaseIntegrationTest(OrderServiceWebApplicationFactory<Program> factory)
     {
         Factory = factory;
         Port = factory.ActualPort;

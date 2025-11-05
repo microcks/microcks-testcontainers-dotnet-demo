@@ -42,10 +42,10 @@ namespace Order.Service.Tests;
 /// This factory is designed to be used as a singleton across all test classes to optimize container startup time.
 /// Containers are started once and reused by all tests in the test assembly.
 /// </summary>
-public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
-    private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.13.0";
+    private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.13.0-native";
 
     private static readonly SemaphoreSlim InitializationSemaphore = new(1, 1);
     private static bool _isInitialized;
@@ -92,17 +92,17 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
         {
             if (_isInitialized)
             {
-                TestLogger.WriteLine("[MicrocksWebApplicationFactory] Factory already initialized, skipping...");
+                TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Factory already initialized, skipping...");
                 return;
             }
 
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting initialization...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting initialization...");
 
             // The port is dynamically determined because we use Microcks,
             // so we need to get an available port before starting the server (Kestrel) and Microcks.
             // because we use microcks to set up the base address for the API in the settings.
             ActualPort = GetAvailablePort();
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Using port: {0}", ActualPort);
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Using port: {0}", ActualPort);
 
             UseKestrel(ActualPort);
             await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
@@ -111,7 +111,7 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
             string kafkaListener = "kafka:19092";
 
             var network = new NetworkBuilder().Build();
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Creating Kafka container...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Creating Kafka container...");
 
             KafkaContainer = new KafkaBuilder()
                 .WithImage("confluentinc/cp-kafka:7.9.0")
@@ -123,7 +123,7 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
                 .Build();
 
             // Start the Kafka container
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting Kafka container...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting Kafka container...");
             await this.KafkaContainer.StartAsync(TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
@@ -135,12 +135,12 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
                 .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
                 .WithKafkaConnection(new KafkaConnection(kafkaListener)); // We need this to connect to Kafka
 
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting Microcks container ensemble...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting Microcks container ensemble...");
             await this.MicrocksContainerEnsemble.StartAsync()
                 .ConfigureAwait(true);
 
             _isInitialized = true;
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Initialization completed successfully");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Initialization completed successfully");
         }
         finally
         {
@@ -188,23 +188,23 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
 
     public async override ValueTask DisposeAsync()
     {
-        TestLogger.WriteLine("[MicrocksWebApplicationFactory] Starting disposal...");
+        TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting disposal...");
 
         await base.DisposeAsync();
 
         if (KafkaContainer != null)
         {
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposing Kafka container...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Disposing Kafka container...");
             await this.KafkaContainer.DisposeAsync();
         }
 
         if (MicrocksContainerEnsemble != null)
         {
-            TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposing Microcks container ensemble...");
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Disposing Microcks container ensemble...");
             await this.MicrocksContainerEnsemble.DisposeAsync();
         }
 
         _isInitialized = false;
-        TestLogger.WriteLine("[MicrocksWebApplicationFactory] Disposal completed");
+        TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Disposal completed");
     }
 }

@@ -9,7 +9,7 @@ Let's fix that!!
 
 For all the integration tests in our application, we need to start Kafka and use mocks provided by Microcks containers.
 
-### Review MicrocksWebApplicationFactory<Program> class under tests/Order.Service.Tests
+### Review OrderServiceWebApplicationFactory<Program> class under tests/Order.Service.Tests
 
 In .NET, we use a custom `WebApplicationFactory<Program>` to provision all required containers and inject configuration for local development and testing. This leverages the .NET Testcontainers library and ASP.NET Core's test infrastructure.
 
@@ -22,7 +22,7 @@ Here's how it works:
 
 Example:
 ```csharp
-public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     // ...existing code...
@@ -74,7 +74,7 @@ This setup means you do not need to manually start Kafka, Microcks, or any other
 
 Let's understand what this configuration class does:
 
-* `MicrocksWebApplicationFactory` extends `KestrelWebApplicationFactory<TProgram>` to provide a custom test environment for our application. `KestrelWebApplicationFactory` is a solution to expose the application on the real host port. In the .NET 10 (under development), this class can be replaced by the `WebApplicationFactory<TProgram>` class.
+* `OrderServiceWebApplicationFactory` extends `KestrelWebApplicationFactory<TProgram>` to provide a custom test environment for our application. `KestrelWebApplicationFactory` is a solution to expose the application on the real host port. In the .NET 10 (under development), this class can be replaced by the `WebApplicationFactory<TProgram>` class.
 * `InitializeAsync` method is called to set up the test environment before running tests. It allocates a free port, starts the Kafka container, and initializes the Microcks container ensemble with the required artifacts.
 In detail:
    * We allocate a free port and expose it for container communication, in .NET it's possible to assign a dynamic port to the kestrel server but when we use Microcks Contract Testing, it's necessary to call the `ExposeHostPortsAsync` method to expose the port for host communication.
@@ -128,7 +128,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
 
     public PastryAPIClientTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;

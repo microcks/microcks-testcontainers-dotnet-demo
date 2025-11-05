@@ -36,13 +36,13 @@ namespace Order.Service.Tests.UseCases;
 /// Contract tests for Kafka event publishing using shared container instances.
 /// Validates that events published by the application conform to AsyncAPI specifications.
 /// </summary>
-public class OrderKafkaContractTests : BaseIntegrationTest
+public class OrderEventPublisherContractTests : BaseIntegrationTest
 {
     private readonly ITestOutputHelper TestOutputHelper;
 
-    public OrderKafkaContractTests(
+    public OrderEventPublisherContractTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
          : base(factory)
     {
         TestOutputHelper = testOutputHelper;
@@ -50,7 +50,7 @@ public class OrderKafkaContractTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task EventIsPublishedWhenOrderIsCreated()
+    public async Task PublishesOrderCreatedEvent_WhenOrderIsPlaced()
     {
         await EnsureTopicExistsAsync("orders-created")
             .ConfigureAwait(true);

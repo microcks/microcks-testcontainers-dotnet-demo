@@ -19,13 +19,13 @@ Let's review the test class `OrderKafkaContractTests` under `tests/Order.Service
 method:
 
 ```csharp
-public class OrderKafkaContractTests : BaseIntegrationTest
+public class OrderEventPublisherContractTests : BaseIntegrationTest
 {
     private readonly ITestOutputHelper TestOutputHelper;
 
-    public OrderKafkaContractTests(
+    public OrderEventPublisherContractTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
@@ -102,22 +102,22 @@ The sequence diagram below details the test sequence. You'll see 2 parallel bloc
 ```mermaid
 sequenceDiagram
     par Launch Microcks test
-      OrderKafkaContractTests->>Microcks: TestEndpointAsync()
+      OrderEventPublisherContractTests->>Microcks: TestEndpointAsync()
       participant Microcks
       Note right of Microcks: Initialized at test startup
       Microcks->>Kafka: poll()
       Kafka-->>Microcks: messages
       Microcks-->Microcks: validate messages
     and Invoke OrderUseCase
-      OrderKafkaContractTests->>+OrderUseCase: PlaceOrderAsync(OrderInfo)
+      OrderEventPublisherContractTests->>+OrderUseCase: PlaceOrderAsync(OrderInfo)
       OrderUseCase->>+OrderEventPublisher: PublishOrderCreatedAsync(OrderEvent)
       OrderEventPublisher->>Kafka: send("orders-created")
       OrderEventPublisher-->-OrderUseCase: done
-      OrderUseCase-->-OrderKafkaContractTests: Order
+      OrderUseCase-->-OrderEventPublisherContractTests: Order
     end
-    OrderKafkaContractTests->>+Microcks: await
-    Note over OrderKafkaContractTests,Microcks: After at most 2 seconds
-    Microcks-->OrderKafkaContractTests: TestResult
+    OrderEventPublisherContractTests->>+Microcks: await
+    Note over OrderEventPublisherContractTests,Microcks: After at most 2 seconds
+    Microcks-->OrderEventPublisherContractTests: TestResult
 ```
 
 Because the test is a success, it means that Microcks has received an `OrderEvent` on the specified topic and has validated the message
@@ -181,7 +181,7 @@ public class OrderEventListenerTests : BaseIntegrationTest
 
     public OrderEventListenerTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory) 
+        OrderServiceWebApplicationFactory<Program> factory) 
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;

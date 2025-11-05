@@ -26,7 +26,7 @@ using Testcontainers.Kafka;
 namespace Order.Service.Tests;
 
 /// <summary>
-/// Base class for integration tests using a shared MicrocksWebApplicationFactory instance.
+/// Base class for integration tests using a shared OrderServiceWebApplicationFactory instance.
 /// All tests inheriting from this class will share the same factory instance across the entire test assembly.
 /// </summary>
 [Collection(SharedTestCollection.Name)]
@@ -41,7 +41,7 @@ public abstract class BaseIntegrationTest
     public KafkaContainer KafkaContainer { get; }
     public HttpClient? HttpClient { get; private set; }
 
-    protected BaseIntegrationTest(MicrocksWebApplicationFactory<Program> factory)
+    protected BaseIntegrationTest(OrderServiceWebApplicationFactory<Program> factory)
     {
         Factory = factory;
 

@@ -20,11 +20,11 @@ using Xunit;
 namespace Order.Service.Tests;
 
 /// <summary>
-/// Collection definition to ensure all integration tests share the same MicrocksWebApplicationFactory instance.
+/// Collection definition to ensure all integration tests share the same OrderServiceWebApplicationFactory instance.
 /// This guarantees that containers are started only once across all test classes.
 /// </summary>
 [CollectionDefinition(Name)]
-public class SharedTestCollection : ICollectionFixture<MicrocksWebApplicationFactory<Program>>
+public class SharedTestCollection : ICollectionFixture<OrderServiceWebApplicationFactory<Program>>
 {
     public const string Name = "SharedTestCollection";
 }

@@ -36,7 +36,7 @@ public class PastryAPIClientTests : BaseIntegrationTest
 
     public PastryAPIClientTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;

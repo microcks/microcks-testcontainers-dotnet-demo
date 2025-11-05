@@ -7,7 +7,7 @@ This guide explains two different approaches for setting up integration tests wi
 When writing integration tests that use Microcks and Kafka containers, you have two main architectural choices:
 
 1. **IClassFixture Pattern**: Multiple container instances, isolated per test class
-2. **ICollectionFixture Pattern**: Single shared container instance, optimized for performance
+2. **ICollectionFixture Pattern**: A set of shared container instances (e.g., one Microcks container and one Kafka container) used by all test classes for optimal performance and resource efficiency
 
 ## Pattern 1: IClassFixture - Isolated Test Classes
 
@@ -19,7 +19,7 @@ When writing integration tests that use Microcks and Kafka containers, you have 
 
 ### Architecture
 ```csharp
-public class MyTestClass : IClassFixture<MicrocksWebApplicationFactory<Program>>
+public class MyTestClass : IClassFixture<OrderServiceWebApplicationFactory<Program>>
 {
     // Each test class gets its own factory instance
     // Each factory starts its own containers
@@ -34,8 +34,15 @@ public class MyTestClass : IClassFixture<MicrocksWebApplicationFactory<Program>>
 ### Implementation Example
 
 #### Step 1: WebApplicationFactory with Dynamic Ports
+
+> **Note:**
+> The implementation of `OrderServiceWebApplicationFactory` (or `OrderServiceWebApplicationFactory`) must be adapted depending on the fixture pattern:
+>
+> - With **IClassFixture**, each test class gets its own factory and containers. You must allocate **dynamic ports** for Kestrel, Kafka, and all services, because static port mapping (like `kafka:9092:9092`) is not possible—otherwise, you will have port conflicts if tests run in parallel. All port assignments must be programmatic and injected into your test server and mocks.
+>
+> - With **ICollectionFixture** (shared collection), a single factory and set of containers are shared for all tests. You allocate ports only once, which simplifies configuration and avoids conflicts. This is why the shared collection pattern is recommended for most test suites.
 ```csharp
-public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     public ushort ActualPort { get; private set; }
@@ -102,13 +109,13 @@ public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFact
 
 #### Step 2: Test Class Implementation
 ```csharp
-public class OrderControllerTests : IClassFixture<MicrocksWebApplicationFactory<Program>>
+public class OrderControllerTests : IClassFixture<OrderServiceWebApplicationFactory<Program>>
 {
-    private readonly MicrocksWebApplicationFactory<Program> _factory;
+    private readonly OrderServiceWebApplicationFactory<Program> _factory;
     private readonly ITestOutputHelper _testOutput;
 
     public OrderControllerTests(
-        MicrocksWebApplicationFactory<Program> factory,
+        OrderServiceWebApplicationFactory<Program> factory,
         ITestOutputHelper testOutput)
     {
         _factory = factory;
@@ -153,7 +160,7 @@ public class OrderControllerTests : IClassFixture<MicrocksWebApplicationFactory<
 ### Architecture
 ```csharp
 [Collection(SharedTestCollection.Name)]
-public class MyTestClass : BaseIntegrationTest
+public class MyTestClass
 {
     // All test classes share the same factory instance
     // Single set of containers for all tests
@@ -161,7 +168,7 @@ public class MyTestClass : BaseIntegrationTest
 ```
 
 ### Key Benefits
-- **Single Container Instance**: One Microcks + one Kafka container for all tests
+- **Single set of containers Instances**: One Microcks + one Kafka container for all tests
 - **Performance Optimized**: ~70% faster test execution
 - **Resource Efficient**: Lower memory and CPU usage
 - **Single Port Allocation**: One Kestrel port for the entire test suite
@@ -171,7 +178,7 @@ public class MyTestClass : BaseIntegrationTest
 #### Step 1: Shared Collection Definition
 ```csharp
 [CollectionDefinition(Name)]
-public class SharedTestCollection : ICollectionFixture<MicrocksWebApplicationFactory<Program>>
+public class SharedTestCollection : ICollectionFixture<OrderServiceWebApplicationFactory<Program>>
 {
     public const string Name = "SharedTestCollection";
 }
@@ -179,7 +186,7 @@ public class SharedTestCollection : ICollectionFixture<MicrocksWebApplicationFac
 
 #### Step 2: Enhanced WebApplicationFactory
 ```csharp
-public class MicrocksWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     private static readonly SemaphoreSlim InitializationSemaphore = new(1, 1);
@@ -250,7 +257,7 @@ public abstract class BaseIntegrationTest
     public KafkaContainer KafkaContainer { get; }
     public HttpClient HttpClient { get; private set; }
 
-    protected BaseIntegrationTest(MicrocksWebApplicationFactory<Program> factory)
+    protected BaseIntegrationTest(OrderServiceWebApplicationFactory<Program> factory)
     {
         Factory = factory;
         HttpClient = factory.CreateClient();
@@ -274,7 +281,7 @@ public class OrderControllerTests : BaseIntegrationTest
 
     public OrderControllerTests(
         ITestOutputHelper testOutput,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         _testOutput = testOutput;

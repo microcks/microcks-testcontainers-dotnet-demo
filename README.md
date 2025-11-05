@@ -16,7 +16,7 @@ You will work with a ASP.NET Core application and explore:
 - [Step 5: Write Tests for Async](step5-write-async-tests.md)
 
 Complementary Resources:
-- [Integration Testing Patterns](step-integration-testing-patterns.md)
+- [Integration Testing Patterns](explain-integration-testing-patterns.md)
 
 ## License Summary
 

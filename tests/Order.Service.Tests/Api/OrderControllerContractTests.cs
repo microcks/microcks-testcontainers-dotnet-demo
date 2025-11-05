@@ -34,7 +34,7 @@ public class OrderControllerContractTests : BaseIntegrationTest
 
     public OrderControllerContractTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;
