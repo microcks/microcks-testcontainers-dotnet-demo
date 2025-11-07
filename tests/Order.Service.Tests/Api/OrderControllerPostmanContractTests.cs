@@ -30,7 +30,7 @@ public class OrderControllerPostmanContractTests : BaseIntegrationTest
 
     public OrderControllerPostmanContractTests(
         ITestOutputHelper testOutputHelper,
-        MicrocksWebApplicationFactory<Program> factory)
+        OrderServiceWebApplicationFactory<Program> factory)
         : base(factory)
     {
         TestOutputHelper = testOutputHelper;

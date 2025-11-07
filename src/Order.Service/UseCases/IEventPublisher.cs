@@ -15,11 +15,13 @@
 //
 //
 
-using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
+using Order.Service.UseCases.Model;
 
-namespace Order.Service.UseCases.Model;
+namespace Order.Service.UseCases;
 
-public sealed record ProductQuantity(
-    [property: JsonPropertyName("productName")] string ProductName,
-    [property: JsonPropertyName("quantity")] int Quantity
-);
+public interface IEventPublisher
+{
+    Task PublishOrderCreatedAsync(OrderEvent orderEvent, CancellationToken cancellationToken = default);
+}

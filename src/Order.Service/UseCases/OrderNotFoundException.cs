@@ -15,11 +15,20 @@
 //
 //
 
-using System.Text.Json.Serialization;
+using System;
 
-namespace Order.Service.UseCases.Model;
+namespace Order.Service.UseCases;
 
-public sealed record ProductQuantity(
-    [property: JsonPropertyName("productName")] string ProductName,
-    [property: JsonPropertyName("quantity")] int Quantity
-);
+/// <summary>
+/// Exception thrown when an order is not found.
+/// </summary>
+public class OrderNotFoundException : Exception
+{
+    public OrderNotFoundException(string orderId) : base($"Order with ID '{orderId}' not found.")
+    {
+    }
+
+    public OrderNotFoundException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}

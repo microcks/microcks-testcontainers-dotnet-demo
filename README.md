@@ -15,6 +15,9 @@ You will work with a ASP.NET Core application and explore:
 - [Step 4: Write Tests for REST](step4-write-rest-tests.md)
 - [Step 5: Write Tests for Async](step5-write-async-tests.md)
 
+Complementary Resources:
+- [Integration Testing Patterns](explain-integration-testing-patterns.md)
+
 ## License Summary
 
 The code in this repository is made available under the MIT license. See the [LICENSE](LICENSE) file for details.

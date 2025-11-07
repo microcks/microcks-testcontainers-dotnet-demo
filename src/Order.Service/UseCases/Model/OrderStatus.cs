@@ -15,9 +15,13 @@
 //
 //
 
+using System.Text.Json.Serialization;
+
 namespace Order.Service.UseCases.Model;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum OrderStatus
 {
     Created,
+    Validated,
 }
