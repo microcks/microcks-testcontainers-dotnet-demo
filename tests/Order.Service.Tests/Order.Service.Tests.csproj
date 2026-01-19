@@ -19,7 +19,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microcks.Testcontainers" Version="0.3.1" />  </ItemGroup>
+    <PackageReference Include="Microcks.Testcontainers" Version="0.3.3" />  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Order.Service\Order.Service.csproj" />
