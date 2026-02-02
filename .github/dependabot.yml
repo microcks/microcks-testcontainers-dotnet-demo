@@ -1,12 +1,21 @@
 version: 2
 updates:
-  - package-ecosystem: "nuget"
-    directory: "/"
+  # NuGet package updates
+  - package-ecosystem: nuget
+    directory: /
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "sunday"
     open-pull-requests-limit: 3
     rebase-strategy: disabled
+    groups:
+      testcontainers:
+        patterns: [ 'Testcontainers', 'Testcontainers.*']
+      microsoft:
+        patterns: [Microsoft.*, System.*]
+        exclude-patterns:
+         - Microsoft.Sbom.Targets
+         - Microsoft.NET.Test.Sdk
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
