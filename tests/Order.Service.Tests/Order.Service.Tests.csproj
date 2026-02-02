@@ -6,20 +6,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Awaitility.NET" Version="1.0.2" />
-    <PackageReference Include="coverlet.collector" Version="6.0.4">
+    <PackageReference Include="Awaitility.NET" />
+    <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.12" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageReference Include="Testcontainers.Kafka" Version="4.7.0" />
-    <PackageReference Include="xunit.v3" Version="3.2.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Testcontainers.Kafka" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microcks.Testcontainers" Version="0.3.1" />  </ItemGroup>
+    <PackageReference Include="Microcks.Testcontainers" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Order.Service\Order.Service.csproj" />
