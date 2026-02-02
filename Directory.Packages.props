@@ -15,6 +15,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
 
     <!-- Test Containers -->
+    <PackageVersion Include="Testcontainers" Version="4.7.0" />
     <PackageVersion Include="Testcontainers.Kafka" Version="4.7.0" />
     <PackageVersion Include="Microcks.Testcontainers" Version="0.3.1" />
 

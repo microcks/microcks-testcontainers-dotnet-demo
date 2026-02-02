@@ -10,7 +10,7 @@ updates:
     rebase-strategy: disabled
     groups:
       testcontainers:
-        patterns: [ 'Testcontainers', 'Testcontainers.*']
+        patterns: ['Testcontainers*', 'Microcks*']
       microsoft:
         patterns: [Microsoft.*, System.*]
         exclude-patterns:
