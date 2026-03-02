@@ -46,7 +46,7 @@ jobs:
       shell: pwsh
 
     - name: 📤 Upload Test And Coverage Results
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       if: always() # run this step even if previous step failed
       with:
         name: ${{ inputs.runs-on }}
