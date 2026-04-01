@@ -29,6 +29,7 @@ using Microcks.Testcontainers;
 using Microcks.Testcontainers.Connection;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
 
 using Testcontainers.Kafka;
@@ -42,7 +43,7 @@ namespace Order.Service.Tests;
 /// This factory is designed to be used as a singleton across all test classes to optimize container startup time.
 /// Containers are started once and reused by all tests in the test assembly.
 /// </summary>
-public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     private const string MicrocksImage = "quay.io/microcks/microcks-uber:1.13.0-native";

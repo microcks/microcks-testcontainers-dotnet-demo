@@ -22,7 +22,7 @@ Here's how it works:
 
 Example:
 ```csharp
-public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     // ...existing code...
@@ -74,7 +74,7 @@ This setup means you do not need to manually start Kafka, Microcks, or any other
 
 Let's understand what this configuration class does:
 
-* `OrderServiceWebApplicationFactory` extends `KestrelWebApplicationFactory<TProgram>` to provide a custom test environment for our application. `KestrelWebApplicationFactory` is a solution to expose the application on the real host port. In the .NET 10 (under development), this class can be replaced by the `WebApplicationFactory<TProgram>` class.
+* `OrderServiceWebApplicationFactory` extends `WebApplicationFactory<TProgram>` to provide a custom test environment for our application. In .NET 10, `WebApplicationFactory` natively supports Kestrel via the `UseKestrel()` method, so no custom wrapper class is needed.
 * `InitializeAsync` method is called to set up the test environment before running tests. It allocates a free port, starts the Kafka container, and initializes the Microcks container ensemble with the required artifacts.
 In detail:
    * We allocate a free port and expose it for container communication, in .NET it's possible to assign a dynamic port to the kestrel server but when we use Microcks Contract Testing, it's necessary to call the `ExposeHostPortsAsync` method to expose the port for host communication.

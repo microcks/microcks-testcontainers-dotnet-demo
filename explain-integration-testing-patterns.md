@@ -42,7 +42,7 @@ public class MyTestClass : IClassFixture<OrderServiceWebApplicationFactory<Progr
 >
 > - With **ICollectionFixture** (shared collection), a single factory and set of containers are shared for all tests. You allocate ports only once, which simplifies configuration and avoids conflicts. This is why the shared collection pattern is recommended for most test suites.
 ```csharp
-public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     public ushort ActualPort { get; private set; }
@@ -186,7 +186,7 @@ public class SharedTestCollection : ICollectionFixture<OrderServiceWebApplicatio
 
 #### Step 2: Enhanced WebApplicationFactory
 ```csharp
-public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplicationFactory<TProgram>, IAsyncLifetime
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
     private static readonly SemaphoreSlim InitializationSemaphore = new(1, 1);
