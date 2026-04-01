@@ -16,8 +16,6 @@
 //
 
 using System;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Linq;
@@ -65,26 +63,6 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
     /// </summary>
     public bool IsInitialized => _isInitialized;
 
-    /// <summary>
-    /// Gets an available port on the host machine.
-    /// </summary>
-    /// <returns>A free port number.</returns>
-    /// <remarks> This method uses a socket to bind to an available port and returns that port number.
-    /// </remarks>
-    private ushort GetAvailablePort()
-    {
-        try
-        {
-            using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-            return (ushort)((IPEndPoint)socket.LocalEndPoint!).Port;
-        }
-        catch (SocketException ex)
-        {
-            throw new InvalidOperationException("Could not find an available port.", ex);
-        }
-    }
-
     public async ValueTask InitializeAsync()
     {
         // Use semaphore to ensure only one initialization happens across all test instances
@@ -99,15 +77,9 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
 
             TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting initialization...");
 
-            // The port is dynamically determined because we use Microcks,
-            // so we need to get an available port before starting the server (Kestrel) and Microcks.
-            // because we use microcks to set up the base address for the API in the settings.
-            ActualPort = GetAvailablePort();
-            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Using port: {0}", ActualPort);
-
-            UseKestrel(ActualPort);
-            await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
-                .ConfigureAwait(true);
+            // Configure Kestrel to use port 0 so the OS dynamically assigns a free port,
+            // eliminating the need to pre-allocate a port via socket binding.
+            UseKestrel(options => options.ListenAnyIP(0));
 
             string kafkaListener = "kafka:19092";
 
@@ -138,6 +110,19 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
 
             TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting Microcks container ensemble...");
             await this.MicrocksContainerEnsemble.StartAsync()
+                .ConfigureAwait(true);
+
+            // Start the server so Kestrel binds to the OS-assigned port.
+            // ConfigureWebHost runs here and can safely access the now-running containers.
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Starting Kestrel server...");
+            StartServer();
+
+            // Retrieve the actual port from the running server.
+            ActualPort = (ushort)ClientOptions.BaseAddress.Port;
+            TestLogger.WriteLine("[OrderServiceWebApplicationFactory] Kestrel bound to port: {0}", ActualPort);
+
+            // Expose the port so that containers can reach back to the host application.
+            await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
                 .ConfigureAwait(true);
 
             _isInitialized = true;

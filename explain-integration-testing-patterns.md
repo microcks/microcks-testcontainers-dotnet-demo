@@ -49,20 +49,10 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
     public KafkaContainer KafkaContainer { get; private set; } = null!;
     public MicrocksContainerEnsemble MicrocksContainerEnsemble { get; private set; } = null!;
 
-    private ushort GetAvailablePort()
-    {
-        using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-        return (ushort)((IPEndPoint)socket.LocalEndPoint!).Port;
-    }
-
     public async ValueTask InitializeAsync()
     {
-        // CRITICAL: Get dynamic port for each instance
-        ActualPort = GetAvailablePort();
-        UseKestrel(ActualPort);
-        
-        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken);
+        // Configure Kestrel with port 0 so the OS dynamically assigns a free port.
+        UseKestrel(options => options.ListenAnyIP(0));
 
         var network = new NetworkBuilder().Build();
 
@@ -83,6 +73,12 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
             .WithKafkaConnection(new KafkaConnection($"kafka:19092"));
 
         await MicrocksContainerEnsemble.StartAsync();
+
+        // Start the server after containers are up, then read the OS-assigned port.
+        StartServer();
+        ActualPort = (ushort)ClientOptions.BaseAddress.Port;
+
+        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -208,12 +204,9 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
             }
 
             TestLogger.WriteLine("[Factory] Starting initialization...");
-            
-            // Single port allocation for all tests
-            ActualPort = GetAvailablePort();
-            UseKestrel(ActualPort);
-            
-            await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken);
+
+            // Configure Kestrel with port 0 so the OS dynamically assigns a free port.
+            UseKestrel(options => options.ListenAnyIP(0));
 
             // Single network and containers for all tests
             var network = new NetworkBuilder().Build();
@@ -232,6 +225,12 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
                 .WithKafkaConnection(new KafkaConnection("kafka:19092"));
 
             await MicrocksContainerEnsemble.StartAsync();
+
+            // Start the server after containers are up, then read the OS-assigned port.
+            StartServer();
+            ActualPort = (ushort)ClientOptions.BaseAddress.Port;
+
+            await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken);
 
             _isInitialized = true;
             TestLogger.WriteLine("[Factory] Initialization completed");

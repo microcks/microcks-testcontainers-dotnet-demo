@@ -28,13 +28,9 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
     // ...existing code...
     public async ValueTask InitializeAsync()
     {
-        // Allocate a free port and expose it for container communication
-        ActualPort = GetAvailablePort();
-        UseKestrel(ActualPort); // ⬅️ Here we configure Kestrel to use the allocated port
-
-        // ⬇️ Here we expose the port for host communication, before starting the containers
-        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
-            .ConfigureAwait(true);
+        // Configure Kestrel to use port 0 so the OS dynamically assigns a free port.
+        // This avoids the need to pre-allocate a port via socket binding.
+        UseKestrel(options => options.ListenAnyIP(0)); // ⬅️ Dynamic port assignment
 
         var network = new NetworkBuilder().Build();
         KafkaContainer = new KafkaBuilder()
@@ -52,6 +48,15 @@ public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory
             .WithSecondaryArtifacts("resources/order-service-postman-collection.json", "resources/third-parties/apipastries-postman-collection.json")
             .WithKafkaConnection(new KafkaConnection($"kafka:19092"));
         await this.MicrocksContainerEnsemble.StartAsync()
+            .ConfigureAwait(true);
+
+        // Start the server so Kestrel binds to the OS-assigned port.
+        // ConfigureWebHost runs here and can safely access the now-running containers.
+        StartServer();
+
+        // Retrieve the actual port and expose it for host communication.
+        ActualPort = (ushort)ClientOptions.BaseAddress.Port; // ⬅️ Read the OS-assigned port
+        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
             .ConfigureAwait(true);
     }
 
@@ -75,11 +80,10 @@ This setup means you do not need to manually start Kafka, Microcks, or any other
 Let's understand what this configuration class does:
 
 * `OrderServiceWebApplicationFactory` extends `WebApplicationFactory<TProgram>` to provide a custom test environment for our application. In .NET 10, `WebApplicationFactory` natively supports Kestrel via the `UseKestrel()` method, so no custom wrapper class is needed.
-* `InitializeAsync` method is called to set up the test environment before running tests. It allocates a free port, starts the Kafka container, and initializes the Microcks container ensemble with the required artifacts.
+* `InitializeAsync` method is called to set up the test environment before running tests. It configures Kestrel for dynamic port assignment, starts the Kafka container, and initializes the Microcks container ensemble with the required artifacts.
 In detail:
-   * We allocate a free port and expose it for container communication, in .NET it's possible to assign a dynamic port to the kestrel server but when we use Microcks Contract Testing, it's necessary to call the `ExposeHostPortsAsync` method to expose the port for host communication.
-   This method ensures that the port is available for communication between the host and the containers, and it is important to call it before starting the containers (This adds extra-host property to the Microcks container).
-   It's not possible to inject the connection string and other configuration in the WebApplicationFactory, so we determine the port before starting the WebApplicationFactory.
+   * We configure Kestrel with `UseKestrel(options => options.ListenAnyIP(0))` so the OS dynamically assigns a free port. After starting the containers, we call `StartServer()` to bind Kestrel to the OS-assigned port, then read the actual port from `ClientOptions.BaseAddress.Port`. Finally, `ExposeHostPortsAsync` is called to allow containers to reach back to the host.
+   This approach removes the need to pre-allocate a port via socket binding, which could introduce race conditions.
    * We configure the Kafka container using the `KafkaBuilder` to set the image, network, and other properties.
    * We also configure a `MicrocksContainersEnsemble` that will be responsible for providing mocks for our 3rd party systems.
    * `ConfigureWebHost` method is overridden to set the base URL for the Pastry API using the endpoint provided by Microcks. This ensures that the application uses the simulated Pastry API endpoint during tests.

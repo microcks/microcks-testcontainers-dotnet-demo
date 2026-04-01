@@ -10,11 +10,12 @@ This instruction defines how to implement contract tests for REST/SOAP APIs usin
 
 ## Rules or Guidelines
 - Use `Testcontainers` to start a Microcks container ensemble and a Kafka container in your test setup.
-- **CRITICAL**: Use `TestcontainersSettings.ExposeHostPortsAsync()` to expose the dynamically allocated application port before building Microcks containers.
-- Always allocate a free port for Kestrel using a socket, and pass it to `UseKestrel(port)` before exposing host ports and starting containers.
-- Expose host ports **before** creating MicrocksContainerEnsemble or KafkaContainer to ensure proper communication.
-   - Don't call `.Build()` on properties if you need to expose host ports.
-   - Don't call `.Build()` before exposing host ports methods.
+- **CRITICAL**: Use `TestcontainersSettings.ExposeHostPortsAsync()` to expose the dynamically assigned application port before tests call `MicrocksContainer.TestEndpointAsync()`.
+- Use `UseKestrel(options => options.ListenAnyIP(0))` to let the OS dynamically assign a free port. Do **not** pre-allocate a port via socket binding.
+- Start containers **before** starting the server so that `ConfigureWebHost` can access container endpoints.
+- Call `StartServer()` after containers are running to start Kestrel and bind to the OS-assigned port.
+- Read the actual bound port from `ClientOptions.BaseAddress.Port` after `StartServer()` returns.
+- Call `ExposeHostPortsAsync(ActualPort)` after obtaining the actual port so containers can reach back to the host.
 - Start a message broker container (e.g., Kafka or AMQP) and pass its connection to Microcks using the appropriate method (e.g., `.WithKafkaConnection(...)` or `.WithAMQPConnection(...)`).
 - Import all relevant contract and collection artifacts into Microcks at container startup using the provided methods (e.g., `.WithMainArtifacts()`, `.WithSecondaryArtifacts()`).
 - Note: If you use AMQP or another broker, adapt the connection setup accordingly (do not use Kafka-specific methods).
@@ -77,13 +78,23 @@ For both .NET 10+ and below, you must call `UseKestrel()` in your `OrderServiceW
 
 For .NET 10 and above, inherit from `WebApplicationFactory<TProgram>`:
 ```csharp
-public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>
+public class OrderServiceWebApplicationFactory<TProgram> : WebApplicationFactory<TProgram>, IAsyncLifetime
     where TProgram : class
 {
-    public OrderServiceWebApplicationFactory()
+    public async ValueTask InitializeAsync()
     {
-        // Even in .NET 10+, call UseKestrel() for consistency and explicitness
-        UseKestrel();
+        // Use port 0 to let the OS dynamically assign a free port.
+        UseKestrel(options => options.ListenAnyIP(0));
+
+        // Start containers first so that ConfigureWebHost can access their endpoints.
+        // ... start Kafka, Microcks, etc. ...
+
+        // Start the server; ConfigureWebHost runs here with containers already up.
+        StartServer();
+
+        // Read the actual OS-assigned port and expose it for container→host communication.
+        ActualPort = (ushort)ClientOptions.BaseAddress.Port;
+        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken);
     }
 }
 ```
@@ -100,19 +111,10 @@ public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplication
     public ushort ActualPort { get; private set; }
     public HttpClient? HttpClient { get; private set; }
 
-    private ushort GetAvailablePort()
-    {
-        using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-        socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-        return (ushort)((IPEndPoint)socket.LocalEndPoint!).Port;
-    }
-
     public async ValueTask InitializeAsync()
     {
-        ActualPort = GetAvailablePort();
-        UseKestrel(ActualPort);
-        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
-            .ConfigureAwait(true);
+        // Use port 0 to let the OS dynamically assign a free port.
+        UseKestrel(0);
 
         var network = new NetworkBuilder().Build();
         KafkaContainer = new KafkaBuilder()
@@ -134,7 +136,12 @@ public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplication
         await this.MicrocksContainerEnsemble.StartAsync()
             .ConfigureAwait(true);
 
+        // CreateClient() starts the server; read the OS-assigned port from ClientOptions.BaseAddress.
         HttpClient = this.CreateClient();
+        ActualPort = (ushort)ClientOptions.BaseAddress.Port;
+
+        await TestcontainersSettings.ExposeHostPortsAsync(ActualPort, TestContext.Current.CancellationToken)
+            .ConfigureAwait(true);
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -154,7 +161,7 @@ public class OrderServiceWebApplicationFactory<TProgram> : KestrelWebApplication
 }
 ```
 
-> **Note:** In .NET 10+, `WebApplicationFactory` supports Kestrel natively, but calling `UseKestrel()` is **mandatory** so that Testcontainers can access the host application.
+> **Note:** In .NET 10+, `WebApplicationFactory` supports Kestrel natively. Use `UseKestrel(options => options.ListenAnyIP(0))` for dynamic port assignment. Start containers before calling `StartServer()`, then read the bound port from `ClientOptions.BaseAddress.Port`.
 
 ### Base Integration Test with Proper Initialization
 ```csharp
