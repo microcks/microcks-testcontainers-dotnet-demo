@@ -24,7 +24,7 @@
 
     <!-- Testing Utilities -->
     <PackageVersion Include="Awaitility.NET" Version="1.0.2" />
-    <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.0" />
 
     <!-- Source Link -->
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.201" />
