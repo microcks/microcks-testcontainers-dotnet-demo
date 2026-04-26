@@ -6,8 +6,8 @@
 
   <ItemGroup>
     <!-- AspNetCore & Web -->
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.6" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.6" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" />
 
     <!-- Testing Framework -->
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
@@ -27,6 +27,6 @@
     <PackageVersion Include="coverlet.collector" Version="10.0.0" />
 
     <!-- Source Link -->
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.202" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.203" />
   </ItemGroup>
 </Project>
